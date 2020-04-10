@@ -21,6 +21,7 @@ import (
 	"crypto"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha512"
@@ -41,19 +42,11 @@ const (
 	aesIV = "IV for <SM2> CTR"
 )
 
-type PublicKey struct {
-	elliptic.Curve
-	X, Y *big.Int
-}
+type PublicKey ecdsa.PublicKey
 
-type PrivateKey struct {
-	PublicKey
-	D *big.Int
-}
+type PrivateKey ecdsa.PrivateKey
 
-type sm2Signature struct {
-	R, S *big.Int
-}
+type sm2Signature ecdsaSignature
 
 // The SM2's private key contains the public key
 func (priv *PrivateKey) Public() crypto.PublicKey {
@@ -165,6 +158,15 @@ func GenerateKey() (*PrivateKey, error) {
 	return priv, nil
 }
 
+func InitKey(k *big.Int) *PrivateKey {
+	c := P256Sm2()
+	priv := new(PrivateKey)
+	priv.PublicKey.Curve = c
+	priv.D = k
+	priv.PublicKey.X, priv.PublicKey.Y = c.ScalarBaseMult(k.Bytes())
+	return priv
+}
+
 var errZeroParam = errors.New("zero parameter")
 
 func Sign(priv *PrivateKey, hash []byte) (r, s *big.Int, err error) {
@@ -266,7 +268,7 @@ func Verify(pub *PublicKey, hash []byte, r, s *big.Int) bool {
 }
 
 func Sm2Sign(priv *PrivateKey, msg, uid []byte) (r, s *big.Int, err error) {
-	za, err := ZA(&priv.PublicKey, uid)
+	za, err := ZA((*PublicKey)(&priv.PublicKey), uid)
 	if err != nil {
 		return nil, nil, err
 	}
