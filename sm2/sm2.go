@@ -258,6 +258,9 @@ func Verify(pub *PublicKey, hash []byte, r, s *big.Int) bool {
 
 	var x *big.Int
 	x1, y1 := c.ScalarBaseMult(s.Bytes())
+	if pub.X == nil || pub.Y == nil {
+		return false
+	}
 	x2, y2 := c.ScalarMult(pub.X, pub.Y, t.Bytes())
 	x, _ = c.Add(x1, y1, x2, y2)
 
@@ -495,6 +498,9 @@ func (z *zr) Read(dst []byte) (n int, err error) {
 var zeroReader = &zr{}
 
 func getLastBit(a *big.Int) uint {
+	if a == nil {
+		return 0
+	}
 	return a.Bit(0)
 }
 
